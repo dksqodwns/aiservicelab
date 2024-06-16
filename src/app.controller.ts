@@ -2,6 +2,8 @@ import {
   Body,
   Controller,
   Get,
+  HttpException,
+  HttpStatus,
   Inject,
   Patch,
   Post,
@@ -13,8 +15,9 @@ import { JoinRequestDto } from './dto/request/join.request.dto';
 import { Response } from 'express';
 import { findEmailRequestDto } from './dto/request/find-email.request.dto';
 import { FindPasswordRequestDto } from './dto/request/find-password.request.dto';
-import { pipe } from '@fxts/core';
+import { pipe, throwIf } from '@fxts/core';
 import { LoginRequestDto } from './dto/request/login.request.dto';
+import { UpdatePasswordDto } from './dto/request/update-password.dto';
 
 @Controller()
 export class AppController {
@@ -50,18 +53,33 @@ export class AppController {
     @Body() dto: FindPasswordRequestDto,
     @Res({ passthrough: true }) res: Response,
   ) {
-    // 이메일을 보내자
-    const passwordToken = await this.service.generatePasswordToken(dto);
-    return pipe(await this.service.sendEmailWithPasswordToken(dto.email), () =>
+    const passwordToken = await this.service.generatePasswordToken(dto.email);
+    return pipe(await this.service.sendEmailWithPasswordToken(dto), () =>
       res.redirect(`${this.BaseUrl}/password?passwordToken=${passwordToken}`),
     );
   }
 
   @Get('/password')
-  async getUpdatePassword(@Query('passwordToken') query: string) {
-    return await this.service.getUpdatePassword(query);
+  async getUpdatePassword(
+    @Res({ passthrough: true }) res: Response,
+    @Query('passwordToken') query: string,
+  ) {
+    return pipe(
+      await this.service.getUpdatePassword(query),
+      throwIf(
+        (token) => !token,
+        () =>
+          new HttpException(
+            '유효하지 않은 토큰 입니다.',
+            HttpStatus.UNAUTHORIZED,
+          ),
+      ),
+      () => res.redirect(`${this.BaseUrl}/updatePassword`),
+    );
   }
 
   @Patch('/password')
-  async updatePassword() {} // bcrypt 사용해서 암호화 된 패스워드 업데이트
+  async updatePassword(dto: UpdatePasswordDto) {
+    return await this.service.updatePassword(dto);
+  }
 }

@@ -1,9 +1,8 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { User } from '../domain/entity/user.entity';
+import { User } from '../domain/entity';
 import { isNil, pipe, throwIf } from '@fxts/core';
-import { findEmailRequestDto } from '../dto/request/find-email.request.dto';
 
 @Injectable()
 export class UsersService {
