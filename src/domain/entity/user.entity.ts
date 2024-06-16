@@ -20,15 +20,15 @@ export class User extends BaseDateTime {
   @Column({ name: 'password' })
   password: string;
 
-  @Column({ name: 'refresh_token' })
+  @Column({ name: 'refresh_token', nullable: true })
   refreshToken: string;
 
   @Column({ name: 'birthday' })
   birthday: string;
 
-  @Column({ name: 'grade' })
+  @Column({ name: 'grade', default: 'ASSOCIATE' })
   grade: Grade;
 
-  @Column({ name: 'status' })
+  @Column({ name: 'status', default: 'STUDENT' })
   status: Status;
 }

@@ -2,13 +2,12 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from './domain/entity';
 import { Repository } from 'typeorm';
-import { isNil, pipe, tap, throwIf } from '@fxts/core';
+import { isNil, pipe, throwIf } from '@fxts/core';
 import {
   findEmailRequestDto,
   FindPasswordRequestDto,
   JoinRequestDto,
 } from './dto/request';
-import { UserValidateDto } from './dto/auth/user.validate.dto';
 import * as bcrypt from 'bcrypt';
 import {
   GenerateAccessTokenDto,
@@ -16,6 +15,8 @@ import {
 } from './dto/auth/generate.token.dto';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from './users/users.service';
+import { LoginRequestDto } from './dto/request/login.request.dto';
+import { LoginResponseDto } from './dto/response/login.response.dto';
 
 @Injectable()
 export class AppService {
@@ -25,6 +26,30 @@ export class AppService {
   ) {}
 
   @InjectRepository(User) private readonly userRepository: Repository<User>;
+
+  async login(dto: LoginRequestDto): Promise<LoginResponseDto> {
+    return pipe(
+      await this.userService.findUserByEmail(dto.email),
+      async (user) => await bcrypt.compare(dto.password, user.password),
+      throwIf(
+        (data) => !data,
+        () =>
+          new HttpException(
+            '비밀번호가 일치하지 않습니다.',
+            HttpStatus.UNAUTHORIZED,
+          ),
+      ),
+      async () =>
+        await Promise.all([
+          this.generateAccessToken(dto),
+          this.generateRefreshToken(dto),
+        ]),
+      ([accessToken, refreshToken]) => ({
+        accessToken,
+        refreshToken,
+      }),
+    );
+  }
 
   async join(dto: JoinRequestDto): Promise<User> {
     return pipe(
@@ -76,24 +101,5 @@ export class AppService {
   async getUpdatePassword(query: string) {
     // query 복호화해서 정상적인 토큰이면 (email이랑 비교해봐서 일치하면) true, 아니면 에러
     return Promise.resolve(undefined);
-  }
-
-  async validateUser(dto: UserValidateDto) {
-    return pipe(
-      await this.userService.findUserByEmail(dto.email),
-      tap(async (user) =>
-        pipe(
-          await bcrypt.compare(dto.password, user.password),
-          throwIf(
-            (data) => !data,
-            () =>
-              new HttpException(
-                '비밀번호가 일치하지 않습니다.',
-                HttpStatus.UNAUTHORIZED,
-              ),
-          ),
-        ),
-      ),
-    );
   }
 }

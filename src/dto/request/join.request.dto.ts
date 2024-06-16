@@ -16,4 +16,8 @@ export class JoinRequestDto {
   @IsString()
   @IsNotEmpty()
   birthday: string;
+
+  @IsString()
+  @IsNotEmpty()
+  phone: string;
 }

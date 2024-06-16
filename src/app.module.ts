@@ -7,6 +7,7 @@ import { OrmConfig } from '../config/domain/orm.config';
 import { ConfigModule } from '@nestjs/config';
 import { User } from './domain/entity';
 import { JwtModule } from '@nestjs/jwt';
+import { UsersService } from './users/users.service';
 
 @Module({
   imports: [
@@ -25,6 +26,21 @@ import { JwtModule } from '@nestjs/jwt';
     UsersModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    UsersService,
+    {
+      provide: 'BaseUrl',
+      useFactory: () => {
+        const env =
+          process.env.PRODE_ENV ?? process.env.NODE_ENV ?? 'development';
+        return env === 'live'
+          ? process.env.LIVE
+          : env === 'pr'
+            ? process.env.TEST
+            : process.env.DEVELOPMENT;
+      },
+    },
+  ],
 })
 export class AppModule {}
